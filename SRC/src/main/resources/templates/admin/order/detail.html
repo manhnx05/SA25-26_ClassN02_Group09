@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="admin/fragment/head :: head">
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+	<!-- Header -->
+	<div th:replace="admin/fragment/header :: header"></div>
+
+	<!-- Wrapper chứa sidebar + main, tránh bị header che -->
+	<div class="pt-14">
+		<div class="flex">
+			<!-- Sidebar -->
+			<div th:replace="admin/fragment/aside :: aside"></div>
+
+			<!-- Main content -->
+			<main class="flex-1 p-6">
+				<div class="bg-white rounded-xl shadow-md p-6">
+					<h1 class="text-2xl font-bold mb-4">Chi tiết đơn hàng</h1>
+
+					<!-- Thông tin đơn hàng -->
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+						<div>
+							<p>
+								<span class="font-medium">Mã đơn hàng:</span> <span
+									th:text="${wrapper.order.id}"></span>
+							</p>
+							<p>
+								<span class="font-medium">Trạng thái:</span> <span
+									th:switch="${wrapper.order.status}"> <span th:case="1"
+									class="text-yellow-600 font-medium">Chờ xác nhận</span> <span
+									th:case="2" class="text-blue-600 font-medium">Đã xác
+										nhận</span> <span th:case="3" class="text-indigo-600 font-medium">Đang
+										chuyển</span> <span th:case="4" class="text-purple-600 font-medium">Đang
+										giao</span> <span th:case="5" class="text-gray-500 font-medium">Đã
+										hủy</span> <span th:case="6" class="text-green-600 font-medium">Thành
+										công</span> <span th:case="7" class="text-red-600 font-medium">Yêu
+										cầu hủy</span> <span th:case="*">Không rõ</span>
+								</span>
+							</p>
+						</div>
+						<div>
+							<p>
+								<span class="font-medium">Khách hàng:</span> <span
+									th:text="${wrapper.order.customer.name}"></span>
+							</p>
+							<p>
+								<span class="font-medium">Số điện thoại:</span> <span
+									th:text="${wrapper.order.customer.phone}"></span>
+							</p>
+							<p>
+								<span class="font-medium">Địa chỉ:</span> <span
+									th:text="${wrapper.order.customer.address}"></span>
+							</p>
+							<p>
+								<span class="font-medium">Ngày đặt:</span> <span
+									th:text="${wrapper.formattedCreatedDate}"></span>
+							</p>
+						</div>
+					</div>
+
+					<!-- Bảng sản phẩm -->
+					<h2 class="text-lg font-semibold mb-2">Sản phẩm trong đơn</h2>
+					<div class="overflow-x-auto">
+						<table
+							class="w-full border border-gray-200 text-sm rounded-lg overflow-hidden">
+							<thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+								<tr>
+									<th class="px-4 py-2 border">Tên sản phẩm</th>
+									<th class="px-4 py-2 border">Số lượng</th>
+									<th class="px-4 py-2 border">Giá</th>
+									<th class="px-4 py-2 border">Thành tiền</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr th:each="item : ${wrapper.order.orderDetails}"
+									class="hover:bg-gray-50">
+									<td class="border px-4 py-2" th:text="${item.product.name}"></td>
+									<td class="border px-4 py-2 text-center"
+										th:text="${item.quantity}"></td>
+									<td
+										class="border px-4 py-2 text-right text-red-600 font-medium"
+										th:text="${wrapper.formatCurrency(item.price)}"></td>
+									<td class="border px-4 py-2 text-right font-semibold"
+										th:text="${wrapper.formatCurrency(item.price * item.quantity)}"></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</main>
+		</div>
+	</div>
+
+	<!-- Footer -->
+	<div th:replace="admin/fragment/footer :: footer"></div>
+	<div th:replace="admin/fragment/script :: script"></div>
+</body>
+</html>
