@@ -38,4 +38,39 @@ public class SecurityConfig {
     public WebSecurityCustomizer webSecurityCustomizer() {
         return (web) -> web.ignoring().requestMatchers("/fe/**", "/assets/**", "/uploads/**");
     }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(authz -> authz
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/user/login", "/user/register", "/register", "/", "/laptops", "/smartphones", "/cameras", "/accessories", "/categories/**", "/api/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .formLogin(form -> form
+                .loginPage("/user/login")
+                .loginProcessingUrl("/user/login")
+                .usernameParameter("username")
+                .passwordParameter("password")
+                .defaultSuccessUrl("/", true)
+                .failureHandler(new CustomAuthenticationFailureHandler())
+                .permitAll()
+            )
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/")
+                .permitAll()
+            )
+            .csrf(csrf -> csrf.disable());
+        
+        return http.build();
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(customUserDetailService);
+        authProvider.setPasswordEncoder(passwordEncoder);
+        return authProvider;
+    }
 }

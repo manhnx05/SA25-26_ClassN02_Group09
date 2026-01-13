@@ -28,9 +28,15 @@ public class CustomUserDetailService implements UserDetailsService {
 			throw new UsernameNotFoundException("Tên đăng nhập không tồn tại");
 		}
 
+		if (!user.getEnabled()) {
+			throw new DisabledException("Tài khoản đã bị vô hiệu hóa");
+		}
+
 		Collection<GrantedAuthority> authorities = new HashSet<>();
-		authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
-		System.out.println("Role: ROLE_" + user.getRole());
+		// Role đã có prefix ROLE_ trong database, không cần thêm nữa
+		String role = user.getRole().startsWith("ROLE_") ? user.getRole() : "ROLE_" + user.getRole();
+		authorities.add(new SimpleGrantedAuthority(role));
+		System.out.println("User: " + username + ", Role: " + role);
 		return new CustomUserDetails(user, authorities);
 	}
 

@@ -82,7 +82,7 @@ public class ProductServiceImpl implements ProductService {
 
 	@Override
 	public Page<Product> searchCategory(String keyword, Integer pageNo) {
-		List list = this.searchProduct(keyword);
+		List<Product> list = this.searchProduct(keyword);
 
 		Pageable pageable = PageRequest.of(pageNo - 1, 2);
 

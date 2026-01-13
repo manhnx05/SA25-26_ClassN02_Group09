@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  oracle:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: oracle-db
+    environment:
+      - ORACLE_PASSWORD=1234567a@
+    ports:
+      - "1521:1521"
+    healthcheck:
+      test: ["CMD", "sqlplus", "-L", "system/1234567a@//localhost:1521/XE", "select", "1", "from", "dual"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  app-test:
+    build: .
+    container_name: app-test-runner
+    depends_on:
+      oracle:
+        condition: service_healthy
+    environment:
+      # Override application.properties to point to the dockerized Oracle DB
+      - SPRING_DATASOURCE_URL=jdbc:oracle:thin:@oracle:1521/XE
+      - SPRING_DATASOURCE_USERNAME=system
+      - SPRING_DATASOURCE_PASSWORD=1234567a@
+      # Ensure Hibernate updates the schema
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    command: mvn test
+
+  app-run:
+    build: .
+    container_name: app-run
+    depends_on:
+      oracle:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:oracle:thin:@oracle:1521/XE
+      - SPRING_DATASOURCE_USERNAME=system
+      - SPRING_DATASOURCE_PASSWORD=1234567a@
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./src:/app/src
+    command: mvn spring-boot:run

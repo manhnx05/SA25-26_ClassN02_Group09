@@ -35,8 +35,7 @@ public class UserServiceImpl implements UserService{
 
 	@Override
 	public User findById(Long id) {
-		// TODO Auto-generated method stub
-		return this.userRepository.findById(id).get();
+		return this.userRepository.findById(id).orElse(null);
 	}
 
 	@Override
@@ -48,13 +47,16 @@ public class UserServiceImpl implements UserService{
 	@Override
 	public Boolean delete(Long id) {
 		try {
-			this.userRepository.delete(findById(id));
-			return true;
+			User user = findById(id);
+			if (user != null) {
+				this.userRepository.delete(user);
+				return true;
+			}
+			return false;
 		} catch (Exception e) {
 			e.printStackTrace();
+			return false;
 		}
-		
-		return false;
 	}
 
 	@Override

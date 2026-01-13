@@ -22,6 +22,7 @@ import com.bkap.dto.ProductDTO;
 import com.bkap.entity.Category;
 import com.bkap.entity.Product;
 import com.bkap.services.CategoryService;
+import com.bkap.services.FileValidationService;
 import com.bkap.services.ProductService;
 import com.bkap.services.StorageService;
 
@@ -35,6 +36,9 @@ public class ProductController {
 
 	@Autowired
 	private CategoryService categoryService;
+
+	@Autowired
+	private FileValidationService fileValidationService;
 
 	@GetMapping("admin/product")
 	public String index(Model model, @Param("keyword") String keyword,
@@ -69,13 +73,21 @@ public class ProductController {
 	@PostMapping("admin/add-product")
 	public String save(@ModelAttribute("product") Product product, @RequestParam("imageFile") MultipartFile file,
 			RedirectAttributes redirect) {
+		
+		// Validate file upload
+		if (!fileValidationService.isValidImageFile(file)) {
+			String errorMessage = fileValidationService.getValidationMessage(file);
+			redirect.addFlashAttribute("error", errorMessage);
+			return "redirect:/admin/add-product";
+		}
+		
 		// upload file
 		String fileName = this.storageService.store(file);
 		product.setImage(fileName);
 
 		if (productService.create(product)) {
 			redirect.addFlashAttribute("success", "Thêm sản phẩm thành công");
-			return "redirect:/admin/category";
+			return "redirect:/admin/product";
 		} else {
 			redirect.addFlashAttribute("error", "Thêm thất bại");
 			return "redirect:/admin/add-product";
@@ -103,6 +115,13 @@ public class ProductController {
 
 		Product oldProduct = productService.findById(product.getId())
 				.orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
+
+		// Validate file upload (cho phép file rỗng khi update)
+		if (!fileValidationService.isValidImageFileOptional(file)) {
+			String errorMessage = fileValidationService.getValidationMessage(file);
+			redirect.addFlashAttribute("error", errorMessage);
+			return "redirect:/admin/edit-product/" + product.getId();
+		}
 
 		// Nếu có file mới → lưu file
 		if (!file.isEmpty()) {

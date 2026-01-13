@@ -14,6 +14,10 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "products")
@@ -24,12 +28,16 @@ public class Product {
     @Column(name = "id")
     private Long id;
 
+    @NotBlank(message = "Tên sản phẩm không được để trống")
+    @Size(max = 255, message = "Tên sản phẩm không được vượt quá 255 ký tự")
     @Column(name = "name")
     private String name;
 
     @Column(name = "status")
     private Boolean status;
 
+    @NotNull(message = "Giá sản phẩm không được để trống")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Giá sản phẩm phải lớn hơn 0")
     @Column(name = "price")
     private Double price;
 
@@ -41,13 +49,16 @@ public class Product {
     @Column(name = "image")
     private String image;
 
+    @NotNull(message = "Danh mục không được để trống")
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
     
+    @Size(max = 100, message = "Tên thương hiệu không được vượt quá 100 ký tự")
     @Column(name = "brand")
     private String brand;
 
+    @Size(max = 2000, message = "Mô tả không được vượt quá 2000 ký tự")
     @Column(name = "description", length = 2000, columnDefinition = "TEXT")
     private String description;
     
