@@ -34,14 +34,8 @@ public class SecurityContextConfig {
 	@Autowired
 	private BCryptPasswordEncoder passwordEncoder;
 
-	@Bean
-	@Primary
-	public DaoAuthenticationProvider authenticationProvider() {
-	    DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-	    authProvider.setUserDetailsService(customUserDetailService);
-	    authProvider.setPasswordEncoder(passwordEncoder);
-	    return authProvider;
-	}
+	@Autowired
+	private DaoAuthenticationProvider authenticationProvider;
 
 	@Bean
 	@Order(1)
@@ -60,7 +54,7 @@ public class SecurityContextConfig {
 	        .logout(logout -> logout.logoutUrl("/admin-logout").logoutSuccessUrl("/logon"))
 	        .csrf(csrf -> csrf.disable())
 	        .securityContext(security -> security.securityContextRepository(adminRepo)) // 🟢 Thêm dòng này
-	        .authenticationProvider(authenticationProvider());
+	        .authenticationProvider(authenticationProvider);
 
 	    return http.build();
 	}
@@ -93,7 +87,7 @@ public class SecurityContextConfig {
 	        )
 	        .csrf(csrf -> csrf.disable())
 	        .securityContext(security -> security.securityContextRepository(userRepo))
-	        .authenticationProvider(authenticationProvider());
+	        .authenticationProvider(authenticationProvider);
 
 	    return http.build();
 	}

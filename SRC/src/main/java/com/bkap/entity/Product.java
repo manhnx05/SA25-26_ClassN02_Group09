@@ -59,7 +59,7 @@ public class Product {
     private String brand;
 
     @Size(max = 2000, message = "Mô tả không được vượt quá 2000 ký tự")
-    @Column(name = "description", length = 2000, columnDefinition = "TEXT")
+    @Column(name = "description", length = 2000, columnDefinition = "CLOB")
     private String description;
     
     public Product() {

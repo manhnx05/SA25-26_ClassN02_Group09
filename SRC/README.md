@@ -1,281 +1,254 @@
-# BÁO CÁO PHÂN TÍCH VÀ THIẾT KẾ KIẾN TRÚC PHẦN MỀM (LAB 2)
+# Báo Cáo Lab 2: Software Architecture Analysis - ShopSphere
+
+## 1. Introduction
+
+### Mục tiêu của Lab 2
+Mục tiêu chính của bài Lab 2 là phân tích và thiết kế kiến trúc phần mềm cho hệ thống E-commerce **ShopSphere**. Bài báo cáo tập trung vào việc áp dụng **Layered Architecture** (Kiến trúc phân lớp) kết hợp với mẫu thiết kế **MVC** (Model-View-Controller) trong Spring Boot để đảm bảo tính module hóa, dễ bảo trì và mở rộng.
+
+### Phạm vi bài lab
+Phạm vi bao gồm việc xác định và mô tả chi tiết 4 tầng kiến trúc: **Presentation Layer**, **Business Logic Layer**, **Persistence Layer**, và **Data Layer**. Bài báo cáo cũng đi sâu vào phân tích luồng dữ liệu (Data Flow), xác định các component chính cho module **Product Catalog**, và định nghĩa các interface giao tiếp giữa các tầng.
+
+### Giới thiệu ngắn về hệ thống ShopSphere
+**ShopSphere** là một hệ thống thương mại điện tử (E-commerce web application) được xây dựng trên nền tảng **Spring Boot**. Hệ thống cung cấp các chức năng chính như:
+-   **Khách hàng (User)**: Xem danh sách sản phẩm (Laptop, Smartphone, Camera...), xem chi tiết sản phẩm, thêm vào giỏ hàng, đặt hàng (Checkout), đăng ký/đăng nhập.
+-   **Quản trị viên (Admin)**: Quản lý sản phẩm (CRUD), quản lý danh mục, xem đơn hàng, quản lý người dùng.
+Hệ thống sử dụng cơ sở dữ liệu quan hệ (Oracle XE / MySQL) để lưu trữ dữ liệu bền vững.
 
 ---
-> **PROJECT**: SHOPSPHERE E-COMMERCE  
-> **STUDENT GROUP**: 09  
-> **DATE**: 14/01/2026
+
+## 2. Architectural Overview
+
+### Kiến trúc tổng thể được sử dụng
+Hệ thống ShopSphere tuân thủ **Strict Layered Architecture** (Kiến trúc phân lớp chặt chẽ) gồm 4 tầng chính:
+1.  **Presentation Layer** (Web Layer)
+2.  **Business Logic Layer** (Service Layer)
+3.  **Persistence Layer** (Repository Layer / DAO)
+4.  **Data Layer** (Database)
+
+### Lý do chọn Layered Architecture
+1.  **Separation of Concerns (Phân tách mối quan tâm)**: Mỗi tầng có trách nhiệm riêng biệt (giao diện, nghiệp vụ, truy xuất dữ liệu), giúp code dễ đọc và quản lý.
+2.  **Maintainability (Khả năng bảo trì)**: Việc thay đổi logic nghiệp vụ không ảnh hưởng trực tiếp đến giao diện hay cách lưu trữ dữ liệu.
+3.  **Testability (Khả năng kiểm thử)**: Có thể viết Unit Test riêng biệt cho Service (Mock Repository) hoặc Controller (Mock Service).
+4.  **Reusability**: Business Logic có thể được tái sử dụng bởi nhiều giao diện khác nhau (Web Admin, Web User, API).
+
+### Cách áp dụng MVC trong Presentation Layer
+Mẫu **MVC** được áp dụng triệt để trong tầng Presentation (sử dụng Spring MVC):
+-   **Model**: Các đối tượng dữ liệu (`Product`, `Category`, `ProductDTO`) chứa thông tin hiển thị.
+-   **View**: Các file template Thymeleaf (`.html` trong `resources/templates`) chịu trách nhiệm hiển thị giao diện người dùng (HTML/CSS).
+-   **Controller**: Các class Java (`@Controller`) nhận yêu cầu từ người dùng, gọi Service để xử lý, và trả về tên View kèm theo Model.
+
 ---
 
-## 1. EXECUTIVE SUMMARY (TÓM TẮT ĐIỀU HÀNH)
+## 3. Layered Architecture Design
 
-Báo cáo này trình bày chi tiết về kiến trúc phần mềm được áp dụng cho dự án thương mại điện tử ShopSphere. Hệ thống được chuyển đổi từ mô hình MVC đơn giản sang **Layered Architecture (Kiến trúc phân lớp)** nhằm giải quyết các vấn đề về khả năng bảo trì (maintainability), khả năng mở rộng (scalability) và khả năng kiểm thử (testability).
+### 3.1. Overview of the Four Layers
 
-Kết quả chính đạt được:
-- Xác định rõ 4 lớp kiến trúc chuẩn: Presentation, Business, Persistence, và Data.
-- Thiết kế chi tiết các thành phần (Component) cho phân hệ quản lý sản phẩm (Product Catalog).
-- Mô hình hóa dữ liệu (ERD) và sơ đồ lớp (Class Diagram) bằng UML.
-- Quy hoạch lại luồng dữ liệu (Data Flow) đảm bảo nguyên tắc Separation of Concerns.
+Hệ thống được tổ chức thành 4 tầng giao tiếp theo chiều dọc (Top-Down):
+
+1.  **Presentation Layer**: `com.bkap.controller`
+2.  **Business Logic Layer**: `com.bkap.services`
+3.  **Persistence Layer**: `com.bkap.repository`
+4.  **Data Layer**: Database (Oracle/MySQL) & Entities (`com.bkap.entity`)
+
+**Nguyên tắc phụ thuộc (Layer Rule)**:
+-   Tầng trên chỉ được gọi xuống tầng ngay bên dưới nó (Strict).
+-   Ví dụ: `Controller` chỉ gọi `Service`, `Service` chỉ gọi `Repository`. `Controller` **không** được gọi trực tiếp `Repository`.
+
+### 3.2. Presentation Layer (MVC)
+-   **Vai trò**: Tiếp nhận request HTTP, validate input cơ bản, gọi Business Layer, và điều hướng đến View thích hợp.
+-   **Các thành phần chính**:
+    -   **Controller**: Xử lý logic điều hướng (`UserWebController`, `Admin/ProductController`).
+    -   **View**: Giao diện HTML (Thymeleaf).
+    -   **DTO/Model**: Dữ liệu chuyển giao giữa View và Controller.
+-   **Ví dụ**: `ProductController` (Admin) nhận request thêm sản phẩm, gọi `fileValidationService` để kiểm tra ảnh, sau đó gọi `productService.create(product)`.
+
+### 3.3. Business Logic Layer
+-   **Vai trò**: Chứa toàn bộ logic nghiệp vụ (Core Business Logic), tính toán, xử lý transaction, validate nghiệp vụ phức tạp.
+-   **Cách ly**: Không phụ thuộc vào web framework (như `HttpServletRequest`) hay database specific (như SQL query chuỗi).
+-   **Ví dụ**: `ProductServiceImpl` thực hiện logic tìm kiếm sản phẩm theo danh mục và thương hiệu, tính toán phân trang (`Pageable`) trước khi gọi Repository.
+
+### 3.4. Persistence Layer
+-   **Vai trò**: Trừu tượng hóa việc truy xuất dữ liệu (Create, Read, Update, Delete). Tầng này giao tiếp trực tiếp với Database.
+-   **Công nghệ**: Sử dụng **Spring Data JPA** để giảm thiểu boilerplate code. Các interface `Repository` kế thừa `JpaRepository`.
+-   **Ví dụ**: `ProductRepository` cung cấp các phương thức có sẵn như `save()`, `findById()`, `delete()` và các custom query như `findByCategory_NameIgnoreCase()`.
+
+### 3.5. Data Layer
+-   **Hệ quản trị CSDL**: Oracle Database XE (hoặc MySQL tùy cấu hình).
+-   **ORM Entities**: Các class POJO ánh xạ vào bảng dữ liệu.
+    -   Table `products`: Ánh xạ bởi class `Product`.
+    -   Table `categories`: Ánh xạ bởi class `Category`.
+    -   Table `orders`: Ánh xạ bởi class `Orders`.
 
 ---
 
-## 2. ARCHITECTURAL OVERVIEW (TỔNG QUAN KIẾN TRÚC)
+## 4. Data Flow Description
 
-### 2.1. High-Level Architecture
-Hệ thống sử dụng kiến trúc **Spring Boot Layered Architecture**. Đây là mô hình tiêu chuẩn cho các ứng dụng Enterprise Java hiện đại.
+### Mô tả luồng xử lý tổng quát
+Request -> **Controller** (Parse/Validate) -> **Service** (Business Logic) -> **Repository** (Query Builder) -> **Database** (Execute SQL).
+Kết quả trả về đi ngược lại: **Database** -> **Entity** -> **Repository** -> **Service** (Domain Object/DTO) -> **Controller** (Model) -> **View** (Render HTML).
 
-```mermaid
-graph TD
-    User((User/Admin))
-    Browser[Web Browser]
-    
-    subgraph "Server Side (Spring Boot)"
-        Controller[Presentation Layer\n(Spring MVC)]
-        Service[Business Logic Layer\n(Service Interfaces)]
-        Repo[Persistence Layer\n(Spring Data JPA)]
-    end
-    
-    Database[(Oracle DB 11g)]
-    
-    User -->|Interaction| Browser
-    Browser <-->|HTTP Request/Response| Controller
-    Controller <-->|DTOs| Service
-    Service <-->|Entities| Repo
-    Repo <-->|JDBC/Hibernate| Database
+### Luồng xử lý cho use case "View Product Details" (Admin View & Edit Example)
+Dưới đây là luồng xử lý khi Admin xem chi tiết sản phẩm để chỉnh sửa (Edit Product):
+
+1.  **User Action**: Admin click nút "Edit" trên danh sách sản phẩm (URL: `/admin/edit-product/123`).
+2.  **Presentation Layer**: `ProductController.edit(id)` nhận request.
+3.  **Business Logic Layer**: Controller gọi `productService.findById(123)`.
+4.  **Persistence Layer**: Service gọi `productRepository.findById(123)`.
+5.  **Data Layer**: Hibernate sinh câu lệnh SQL `SELECT * FROM products WHERE id = 123` và gửi xuống Database.
+6.  **Return Path**: Database trả về Result Set -> Hibernate map thành object `Product` -> Repository trả về `Optional<Product>` -> Service trả về `Product` entity -> Controller nhận product, đưa vào `Model`, và trả về view `admin/product/edit`.
+
+---
+
+## 5. Component Identification – Product Catalog
+
+Phân tích chi tiết các thành phần tham gia vào module Quản lý Sản phẩm (Product Catalog).
+
+### 5.1. Components in Presentation Layer
+| Component (Class) | Package | Chức năng & Trách nhiệm |
+| :--- | :--- | :--- |
+| **ProductController** | `com.bkap.controller.admin` | Xử lý các request quản trị sản phẩm: List (`index`), Add (`save`), Edit (`update`), Delete (`delete`). Kiểm soát input từ form và upload ảnh. |
+| **UserWebController** | `com.bkap.controller` | Xử lý hiển thị danh sách sản phẩm cho người dùng cuối (Frontend): Laptop, Smartphone, tìm kiếm, lọc theo brand. |
+
+### 5.2. Components in Business Logic Layer
+| Component (Class/Interface) | Package | Chức năng & Trách nhiệm |
+| :--- | :--- | :--- |
+| **ProductService** (Interface) | `com.bkap.services` | Định nghĩa các hợp đồng (contract) nghiệp vụ cho sản phẩm: `getAll()`, `findById()`, `create()`, `searchByKeyword()`. |
+| **ProductServiceImpl** | `com.bkap.services` | Implement các nghiệp vụ. Logic tìm kiếm (search logic), logic phân trang (`PageRequest`), xử lý exception khi lưu DB. |
+
+### 5.3. Components in Persistence Layer
+| Component (Interface) | Package | Chức năng & Trách nhiệm |
+| :--- | :--- | :--- |
+| **ProductRepository** | `com.bkap.repository` | Interface kế thừa `JpaRepository<Product, Long>`. Cung cấp phương thức CRUD chuẩn và Custom Query (`findByCategory_NameIgnoreCase`, `searchProduct`). |
+
+---
+
+## 6. Interface Definition
+
+Các tầng giao tiếp với nhau thông qua Java Interfaces để đảm bảo tính Loose Coupling (Giảm sự phụ thuộc chặt chẽ).
+
+### 6.1. Interface between Presentation & Business Layer
+**Giao diện**: `ProductService`
+Controller gọi các phương thức này:
+
+```java
+public interface ProductService {
+    // Lấy chi tiết sản phẩm
+    Optional<Product> findById(long id);
+
+    // Lấy danh sách phân trang (cho trang category)
+    Page<Product> findByCategoryIdWithPageable(int categoryId, Pageable pageable);
+
+    // Thêm mới sản phẩm (Nghiệp vụ Admin)
+    Boolean create(Product product);
+
+    // Tìm kiếm sản phẩm
+    List<Product> searchProduct(String keyword);
+}
 ```
 
-### 2.2. Chi tiết 4 lớp kiến trúc (The Four Layers)
+### 6.2. Interface between Business & Persistence Layer
+**Giao diện**: `ProductRepository`
+Service gọi các phương thức này của Spring Data JPA:
 
-| Layer | Package Name | Trách nhiệm chính (Responsibility) | Nguyên tắc giao tiếp |
-| :--- | :--- | :--- | :--- |
-| **1. Presentation** | `com.bkap.controller` | Xử lý Request/Response, Validate Input sơ bộ, Render View (Thymeleaf). | Gọi xuống `Service`. Trả về `View` hoặc `JSON`. |
-| **2. Business** | `com.bkap.services` | Thực thi logic nghiệp vụ, Transaction Management, Validate nghiệp vụ. | Gọi xuống `Repository`. Được gọi bởi `Controller`. |
-| **3. Persistence** | `com.bkap.repository` | Trừu tượng hóa truy vấn Database, Map Dữ liệu quan hệ sang Object (ORM). | Gọi xuống `Database`. Được gọi bởi `Service`. |
-| **4. Data** | *Oracle Database* | Lưu trữ dữ liệu vật lý bảng (Products, Orders...). | Chỉ giao tiếp với `Repository` qua Driver. |
-
-### 2.3. Rationale (Lý do lựa chọn)
-Tại sao không dùng MVC thuần túy (Controller gọi thẳng Database)?
-- **Hạn chế của MVC thuần túy**: Logic nghiệp vụ bị trộn lẫn trong Controller hoặc Model. Khi hệ thống lớn, Code trở nên khó quản lý (Spaghetti Code).
-- **Lợi ích của Layered Architecture**:
-    - **Loose Coupling**: Thay đổi Database từ Oracle sang MySQL chỉ cần sửa Repository, không ảnh hưởng Controller.
-    - **Sự chuyên biệt**: Frontend Dev làm việc ở Presentation, Backend Dev làm việc ở Service/Repo.
+```java
+public interface ProductRepository extends JpaRepository<Product, Long> {
+    // Spring Data JPA tự động implement findById(Long id)
+    
+    // Custom query method
+    List<Product> findByCategory_NameIgnoreCase(String categoryName);
+    
+    @Query("SELECT p FROM Product p WHERE LOWER(p.name) LIKE ...")
+    List<Product> searchProduct(@Param("keyword") String keyword);
+}
+```
 
 ---
 
-## 3. DETAILED COMPONENT DESIGN (THIẾT KẾ THÀNH PHẦN CHI TIẾT)
-*Case Study: Product Catalog Module*
+## 7. UML Component Diagram & C4 Model (Level 3)
 
-### 3.1. Class Diagram (Sơ đồ lớp chi tiết)
+Minh họa kiến trúc phần mềm và quan hệ giữa các component.
+
+### 7.1. Diagram Description (C4 Component Level)
 
 ```mermaid
 classDiagram
+    direction TB
+    
     class ProductController {
-        +index(Model, keyword, pageNo)
-        +add(Model)
-        +save(Product, MultipartFile)
-        +update(Product, MultipartFile)
+        <<Presentation Layer>>
+        +index()
+        +save()
+        +update()
     }
 
     class ProductService {
         <<Interface>>
-        +getAll(Pageable)
-        +create(Product)
-        +searchByNameOrCategory(String)
+        +findById(id)
+        +create(product)
+        +search(keyword)
     }
 
     class ProductServiceImpl {
-        +getAll(Pageable)
-        +create(Product)
+        <<Business Layer>>
+        +findById(id)
+        +create(product)
     }
 
     class ProductRepository {
-        <<Interface>>
-        +searchProduct(String keyword)
-        +findTop3LatestLaptops()
+        <<Persistence Layer>>
+        +findAll()
+        +save()
+        +findByCategory()
     }
 
     class Product {
+        <<Entity>>
         -Long id
         -String name
         -Double price
-        -String image
-        -Category category
-    }
-    
-    class Category {
-        -Integer id
-        -String name
-        -Set~Product~ products
     }
 
-    ProductController --> ProductService : uses
-    ProductServiceImpl ..|> ProductService : implements
-    ProductServiceImpl --> ProductRepository : uses
-    ProductRepository --> Product : manages
-    Product "n" --> "1" Category : belongs to
+    ProductController ..> ProductService : Uses
+    ProductService <|.. ProductServiceImpl : Implements
+    ProductServiceImpl ..> ProductRepository : Uses
+    ProductRepository ..> Product : Manages
 ```
 
-### 3.2. Database Schema (Mô hình thực thể quan hệ - ERD)
+**Mô tả sơ đồ**:
+-   **ProductController** phụ thuộc vào interface **ProductService** (Dependency Injection), giúp Controller không cần biết chi tiết cài đặt của logic nghiệp vụ.
+-   **ProductServiceImpl** thực thi `ProductService` và gọi **ProductRepository** để lấy dữ liệu.
+-   **ProductRepository** trả về các đối tượng **Product** (Entity) được map từ Database.
 
-```mermaid
-erDiagram
-    USERS ||--|| CUSTOMERS : has
-    CUSTOMERS ||--o{ ORDERS : places
-    ORDERS ||--o{ ORDER_DETAILS : contains
-    PRODUCTS ||--o{ ORDER_DETAILS : included_in
-    CATEGORIES ||--o{ PRODUCTS : categorizes
-
-    USERS {
-        long id PK
-        string username
-        string password
-        string role
-        boolean enabled
-    }
-
-    CUSTOMERS {
-        long id PK
-        string phone
-        string address
-        long user_id FK
-    }
-
-    PRODUCTS {
-        long id PK
-        string name
-        double price
-        string image
-        int category_id FK
-    }
-
-    CATEGORIES {
-        int id PK
-        string name
-        boolean status
-    }
-
-    ORDERS {
-        long id PK
-        int customer_id FK
-        datetime created
-        int status
-    }
-```
+### 7.2. Layer Dependency Enforcement
+Hệ thống đảm bảo đúng quy tắc của Layered Architecture thông qua việc:
+-   Trong `ProductController`, chỉ có `@Autowired private ProductService productService;`. Không có khai báo Repository.
+-   Trong `ProductServiceImpl`, chỉ có `@Autowired private ProductRepository productRepository;`. Không có code xử lý `HttpServletRequest` hay `View`.
 
 ---
 
-## 4. INTERACTION DESIGN & DATA FLOW (THIẾT KẾ TƯƠNG TÁC)
+## 8. Tools & Technologies
 
-### 4.1. Sequence Diagram: Happy Path (Thêm sản phẩm thành công)
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Admin
-    participant PC as ProductController
-    participant FVS as FileValidationService
-    participant SS as StorageService
-    participant PS as ProductService
-    participant PR as ProductRepository
-    participant DB as Oracle Database
-
-    Admin->>PC: POST /admin/add-product (Data + File)
-    
-    note over PC: Step 1: Validate Input
-    PC->>FVS: isValidImageFile(file)
-    FVS-->>PC: true
-
-    note over PC: Step 2: Handle File Upload
-    PC->>SS: store(file)
-    SS-->>PC: "filename.jpg"
-    PC->>PC: product.setImage("filename.jpg")
-
-    note over PC: Step 3: Call Business Logic
-    PC->>PS: create(product)
-    
-    note over PS: Step 4: Calls Persistence
-    PS->>PR: save(product)
-    PR->>DB: INSERT INTO products VALUES (...)
-    DB-->>PR: Success
-    PR-->>PS: Product Entity
-    PS-->>PC: true (Boolean)
-
-    PC-->>Admin: Redirect /admin/product + "Success Message"
-```
-
-### 4.2. Sequence Diagram: Exception Handling (Lỗi Validation)
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Admin
-    participant PC as ProductController
-    participant FVS as FileValidationService
-
-    Admin->>PC: POST /admin/add-product
-    PC->>FVS: isValidImageFile(file)
-    FVS-->>PC: false (File too large / Wrong format)
-
-    note over PC: Break Flow
-    PC-->>Admin: Redirect /admin/add-product + "Error: File invalid"
-```
+Công cụ được sử dụng để thiết kế và hiện thực:
+-   **Thiết kế Diagram**: draw.io (diagrams.net), Mermaid JS.
+-   **Framework**: Spring Boot 3.x (Spring MVC, Spring Data JPA, Spring Security).
+-   **Database**: Oracle Database XE / MySQL.
+-   **View Engine**: Thymeleaf.
+-   **Build Tool**: Maven.
+-   **IDE**: IntelliJ IDEA / VS Code / Eclipse.
 
 ---
 
-## 5. INTERFACE SPECIFICATIONS (ĐẶC TẢ GIAO DIỆN)
+## 9. Conclusion
 
-### 5.1. Service Layer Interface (`ProductService`)
+### Tóm tắt kết quả đạt được
+Qua Lab 2, chúng ta đã:
+1.  Xây dựng thành công kiến trúc **Layered Architecture** rõ ràng cho ShopSphere.
+2.  Áp dụng **MVC** để phân tách giao diện và xử lý logic.
+3.  Xác định ranh giới rõ ràng giữa Controller, Service và Repository.
+4.  Cung cấp tài liệu chi tiết về Data Flow và Interface Definition cho module sản phẩm.
 
-| Phương thức | Input Parameters | Return Type | Exception/Logic |
-| :--- | :--- | :--- | :--- |
-| `create` | `Product product` | `Boolean` | Validate nếu giá < 0 trả về false. Gọi Repository.save(). |
-| `findById` | `Long id` | `Optional<Product>` | Trả về Empty nếu không tìm thấy ID. |
-| `searchByNameOrCategory` | `String keyword`, `Integer pageNo` | `Page<Product>` | Tìm kiếm trong cả tên sản phẩm và tên danh mục. Phân trang 5 item/page. |
-| `findTop3LatestLaptops` | *None* | `List<Product>` | Lọc cứng category='Laptop', sort theo ID giảm dần, limit 3. |
-
-### 5.2. Repository Layer Interface (`ProductRepository`)
-
-| Phương thức | Loại Query | JPQL / SQL Query |
-| :--- | :--- | :--- |
-| `searchProduct` | Custom JPQL | `SELECT p FROM Product p WHERE LOWER(p.name) LIKE ...` |
-| `findTop3LatestLaptops` | Custom JPQL | `SELECT p FROM Product p WHERE p.category.name = 'laptops' ORDER BY p.id DESC` |
-
----
-
-## 6. PROJECT STRUCTURE & IMPLEMENTATION (CẤU TRÚC DỰ ÁN)
-
-Cấu trúc thư mục mã nguồn được tổ chức khoa học theo các package tương ứng với các lớp kiến trúc:
-
-```
-src/main/java/com/bkap
-├── controller           # [Presentation] Controller Layer
-│   ├── admin            # Controllers cho trang Admin (Product, User...)
-│   └── (root)           # Controllers cho trang User (Home, Cart...)
-├── services             # [Business] Service Interfaces
-│   └── impl             # (Nếu có tách riêng) hoặc nằm chung package
-├── repository           # [Persistence] Interfaces kế thừa JpaRepository
-├── entity               # [Domain] Entity Classes map với Database 
-├── dto                  # [Transfer] Data Transfer Objects
-├── config               # [Configuration] Security, Bean configs
-└── utils                # [Helper] Các hàm tiện ích
-```
-
-### Các File cấu hình quan trọng:
-1.  **`pom.xml`**: Khai báo dependencies (Spring Web, Spring Data JPA, Oracle Driver, Thymeleaf, Lombok).
-2.  **`application.properties`**:
-    - Cấu hình kết nối Oracle (`spring.datasource.url`).
-    - Cấu hình Hibernate Dialect (`org.hibernate.dialect.OracleDialect`).
-    - Cấu hình Thymeleaf cache (tắt cache khi dev).
-
----
-
-## 7. CONCLUSION (KẾT LUẬN)
-
-Báo cáo Lab 2 này đã chứng minh tính hiệu quả của việc áp dụng **Layered Architecture** vào dự án ShopSphere.
-- **Tính đúng đắn**: Kiến trúc phản ánh đúng yêu cầu của một hệ thống Enterprise tiêu chuẩn.
-- **Tính trọn vẹn**: Đã bao phủ toàn bộ các khía cạnh từ Database, Backend Logic đến Frontend Interaction.
-- **Sẵn sàng triển khai**: Các đặc tả Interface và Database là cơ sở vững chắc để bước vào giai đoạn Coding (Lab 3).
-
-Thiết kế này không chỉ giúp hoàn thành yêu cầu bài Lab mà còn định hình phong cách Coding chuyên nghiệp, tránh các lỗi phổ biến về kiến trúc trong các dự án lớn.
-
----
-*End of Report.*
+### Vai trò của thiết kế này cho Lab 3 (Implementation)
+Sự phân tách rõ ràng này là tiền đề quan trọng cho **Lab 3**:
+-   Giúp Developer dễ dàng implement từng phần (Front-end developer làm View, Back-end developer làm Service/Repository) mà không dẫm chân nhau.
+-   Việc thay đổi Database (ví dụ từ MySQL sang Oracle) chỉ cần sửa cấu hình và Repository, không ảnh hưởng Controller.
+-   Hệ thống sẵn sàng để mở rộng thêm các tính năng phức tạp như Thanh toán, Vận chuyển trong các giai đoạn sau.
